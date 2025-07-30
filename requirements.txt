@@ -1,0 +1,5 @@
+numpy
+sympy
+pandas
+big_o
+requests

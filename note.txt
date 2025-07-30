@@ -1,0 +1,7 @@
+node_modules/rayso/src/rayso.js
+
+add this to the rayso.js file:
+
+document.querySelector(
+    'body > div > main > div.code_app__D8hzR > div.Controls_controls__Tz_C5'
+).style.display = 'none'

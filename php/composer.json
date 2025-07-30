@@ -1,0 +1,21 @@
+{
+    "name": "leetcode/php",
+    "description": "Data Structures and Algorithms in PHP",
+    "type": "project",
+    "require": {
+        "php": ">=7.4"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.5"
+    },
+    "autoload": {
+        "psr-4": {
+            "leetcode\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "leetcode\\Tests\\": "tests/"
+        }
+    }
+}

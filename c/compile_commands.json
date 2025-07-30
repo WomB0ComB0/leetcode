@@ -1,0 +1,7 @@
+[
+  {
+    "directory": "${workspaceFolder}/build",
+    "command": "gcc -I${workspaceFolder}/include -c ${file} -o ${fileDirname}/${fileBasenameNoExtension}.o",
+    "file": "${file}"
+  }
+]

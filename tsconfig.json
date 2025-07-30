@@ -1,0 +1,24 @@
+// https://bun.sh/docs/typescript
+{
+    "compilerOptions": {
+        "target": "ESNext",
+        "module": "ESNext",
+        "moduleResolution": "node",
+        "esModuleInterop": true,
+        "strict": true,
+        "skipLibCheck": true,
+        "forceConsistentCasingInFileNames": true,
+        "outDir": "dist",
+        "rootDir": ".",
+        "allowJs": true,
+        "resolveJsonModule": true
+    },
+    "include": [
+        "**/*.ts",
+        "env.d.ts"
+    ],
+    "exclude": [
+        "node_modules",
+        "dist"
+    ]
+}

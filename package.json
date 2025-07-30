@@ -1,0 +1,43 @@
+{
+  "name": "leetcode-solutions",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "test": "jest",
+    "tdd": "jest --watchAll",
+    "move": "bun move.ts",
+    "clean": "bun clean.ts",
+    "daily": "bun daily.ts",
+    "problems": "bun problems.ts",
+    "lint": "bunx biome check --write ./**/*.{js,ts} || true",
+    "post": "bun post.ts"
+  },
+  "keywords": [],
+  "license": "MIT",
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@swc/core": "^1.3.100",
+    "@swc/jest": "^0.2.29",
+    "@types/bun": "^1.1.14",
+    "@types/jest": "^29.5.11",
+    "@types/node": "^22.10.2",
+    "bun-types": "^1.0.17",
+    "cli-table": "^0.3.11",
+    "jest": "30.0.0-alpha.2",
+    "mitata": "^0.1.6",
+    "prettier": "^3.1.1",
+    "prettier-plugin-organize-imports": "^3.2.4",
+    "pretty-ms": "^8.0.0",
+    "rayso": "^1.2.1",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "@atproto/api": "^0.13.20",
+    "axios": "^1.7.9",
+    "date-fns": "^2.30.0",
+    "dotenv": "^16.4.7",
+    "puppeteer": "^23.11.1",
+    "ts-node": "^10.9.2"
+  }
+}
