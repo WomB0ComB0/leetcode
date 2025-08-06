@@ -24,6 +24,63 @@ interface RaysoOptions {
   language?: string;
 }
 
+/**
+ * Patches the RaySo library to hide controls if not already patched
+ */
+async function patchRaySoLibrary(): Promise<void> {
+  const raysoPath = path.join("node_modules", "rayso", "src", "rayso.js");
+  
+  try {
+    // Check if file exists
+    await fs.access(raysoPath);
+    
+    // Read the current content
+    const content = await fs.readFile(raysoPath, "utf-8");
+    
+    // Check if already patched
+    const patchCheck = `document.querySelector(
+                    'body > div > main > div.code_app__D8hzR > div.Controls_controls__Tz_C5'
+                ).style.display = 'none'`;
+    
+    if (content.includes(".Controls_controls__Tz_C5").includes("display = 'none'")) {
+      console.log("RaySo library already patched ✓");
+      return;
+    }
+    
+    // Find the location to insert the patch
+    const targetLine = `document.querySelector(
+                    'body > div > main > div.code_app__D8hzR > div.Frame_frameContainer__GrOiz > div > div.ResizableFrame_windowSizeDragPoint__MeF70.ResizableFrame_right__MUj0x'
+                ).style.display = 'none'`;
+    
+    if (!content.includes(targetLine)) {
+      console.warn("Warning: RaySo library structure may have changed. Patch location not found.");
+      return;
+    }
+    
+    // Insert the new patch after the existing patches
+    const patchToAdd = `
+            document.querySelector(
+                'body > div > main > div.code_app__D8hzR > div.Controls_controls__Tz_C5'
+            ).style.display = 'none'`;
+    
+    const patchedContent = content.replace(
+      targetLine,
+      targetLine + patchToAdd
+    );
+    
+    // Write the patched content back
+    await fs.writeFile(raysoPath, patchedContent, "utf-8");
+    console.log("RaySo library patched successfully ✓");
+    
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") {
+      console.warn("RaySo library not found at expected path. Skipping patch.");
+    } else {
+      console.error("Error patching RaySo library:", error);
+    }
+  }
+}
+
 async function promptYesNo(question: string): Promise<boolean> {
   const rl = createInterface({
     input: process.stdin,
@@ -251,6 +308,9 @@ async function findFile(problemId: string): Promise<string | null> {
 }
 
 async function main(): Promise<void> {
+  // Patch RaySo library first
+  await patchRaySoLibrary();
+
   const problemName: string = Bun.argv[2];
 
   if (!problemName) {
