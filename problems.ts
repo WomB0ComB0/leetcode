@@ -79,8 +79,7 @@ async function fetchProblemDetails(
       codeSnippets: snippetsResponse.data.data.question.codeSnippets,
       difficulty: problemInfoResponse.data.data.question.difficulty,
       questionId: problemInfoResponse.data.data.question.questionId,
-      questionFrontendId:
-        problemInfoResponse.data.data.question.questionFrontendId,
+      questionFrontendId: problemInfoResponse.data.data.question.questionFrontendId,
     };
   } catch (error) {
     console.error(`Error fetching details for ${titleSlug}:`, error);
@@ -143,6 +142,7 @@ async function promptYesNo(
 
   return new Promise((resolve) => {
     rl.question(`${question} (y/n): `, (answer) => {
+    
       rl.close();
       resolve(answer.toLowerCase().startsWith("y"));
     });
@@ -156,7 +156,7 @@ async function promptYesNo(
 async function main(): Promise<void> {
   const titleSlug = Bun.argv[2];
   const language = Bun.argv[3];
-  const nonInteractive = Bun.argv.includes("--non-interactive"); // Add a flag for non-interactive mode
+  const nonInteractive = Bun.argv.includes("--non-interactive");
 
   if (!titleSlug) {
     console.error("Please provide a problem slug as an argument");
@@ -251,9 +251,7 @@ async function main(): Promise<void> {
         if (!shouldReplace) {
           console.log(`Skipping: ${filePath}`);
         }
-      } catch {
-        // File doesn't exist, continue with creation
-      }
+      } catch {  }
     }
   } catch (error) {
     console.error("Error:", error);
@@ -261,9 +259,7 @@ async function main(): Promise<void> {
   }
 }
 
-const run = async (): Promise<void> {
-    await main();
-}
+const run = async (): Promise<void> => { await main(); }
 
 if (require.main === module) {
   run().catch(console.error);

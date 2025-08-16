@@ -1,0 +1,212 @@
+name: Daily LeetCode Challenges
+
+on:
+    push:
+        branches:
+            - master
+    schedule:
+        - cron: '50 23 * * *'  # Runs at 23:50 UTC daily (10 minutes before LeetCode daily reset at 00:00 UTC)
+    workflow_dispatch:
+        inputs:
+            files:
+                description: "Files affected"
+                required: false
+                default: "[]"
+                type: string
+
+permissions:
+    contents: write
+    id-token: write
+
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    daily:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            - name: Get repository owner info with fallbacks
+              id: repo-info
+              run: |
+                  REPO_OWNER="${{ github.repository_owner }}"
+                  
+                  # Method 1: Try to get info from the most recent commit
+                  LAST_COMMIT_AUTHOR=$(git log -1 --pretty=format:'%an')
+                  LAST_COMMIT_EMAIL=$(git log -1 --pretty=format:'%ae')
+                  
+                  echo "Last commit author: $LAST_COMMIT_AUTHOR"
+                  echo "Last commit email: $LAST_COMMIT_EMAIL"
+                  
+                  # Method 2: GitHub API fallback
+                  echo "Fetching owner info from GitHub API..."
+                  USER_INFO=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                    "https://api.github.com/users/$REPO_OWNER" || echo '{}')
+                  
+                  API_NAME=$(echo "$USER_INFO" | jq -r '.name // empty' 2>/dev/null || echo "")
+                  API_EMAIL=$(echo "$USER_INFO" | jq -r '.email // empty' 2>/dev/null || echo "")
+                  
+                  # Method 3: Use GitHub context as ultimate fallback
+                  CONTEXT_ACTOR="${{ github.actor }}"
+                  
+                  # Determine the best name to use
+                  if [ -n "$LAST_COMMIT_AUTHOR" ] && [ "$LAST_COMMIT_AUTHOR" != "GitHub" ] && [ "$LAST_COMMIT_AUTHOR" != "github-actions[bot]" ]; then
+                    GIT_NAME="$LAST_COMMIT_AUTHOR"
+                  elif [ -n "$API_NAME" ] && [ "$API_NAME" != "null" ]; then
+                    GIT_NAME="$API_NAME"
+                  elif [ "$CONTEXT_ACTOR" != "$REPO_OWNER" ]; then
+                    GIT_NAME="$CONTEXT_ACTOR"
+                  else
+                    GIT_NAME="$REPO_OWNER"
+                  fi
+                  
+                  # Determine the best email to use
+                  if [ -n "$LAST_COMMIT_EMAIL" ] && [[ "$LAST_COMMIT_EMAIL" != *"@users.noreply.github.com" ]] && [[ "$LAST_COMMIT_EMAIL" != *"github-actions"* ]]; then
+                    GIT_EMAIL="$LAST_COMMIT_EMAIL"
+                  elif [ -n "$API_EMAIL" ] && [ "$API_EMAIL" != "null" ]; then
+                    GIT_EMAIL="$API_EMAIL"
+                  else
+                    GIT_EMAIL="${REPO_OWNER}@users.noreply.github.com"
+                  fi
+                  
+                  # Output the results
+                  echo "git-name=$GIT_NAME" >> $GITHUB_OUTPUT
+                  echo "git-email=$GIT_EMAIL" >> $GITHUB_OUTPUT
+                  echo "repo-owner=$REPO_OWNER" >> $GITHUB_OUTPUT
+                  
+                  # Debug output
+                  echo "========================="
+                  echo "Repository owner: $REPO_OWNER"
+                  echo "Selected Git name: $GIT_NAME"
+                  echo "Selected Git email: $GIT_EMAIL"
+                  echo "Actor: $CONTEXT_ACTOR"
+                  echo "API name: $API_NAME"
+                  echo "API email: $API_EMAIL"
+                  echo "========================="
+
+            - name: Debug directory structure
+              run: |
+                  echo "Current directory structure:"
+                  ls -la
+                  echo "Checking for package.json files:"
+                  find . -name "package.json" -type f | sort
+
+            - name: Install Bun
+              uses: oven-sh/setup-bun@v2
+              with:
+                  bun-version: latest
+
+            - name: Set node version to 18
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "node"
+
+            - name: Install dependencies
+              run: |
+                  bun install
+
+            - name: Run daily.ts
+              run: |
+                  bun run daily.ts
+
+            - name: Check for changes
+              id: changes
+              run: |
+                  if [[ -n $(git status --porcelain) ]]; then
+                    echo "changes=true" >> $GITHUB_OUTPUT
+                    git add .
+                    echo "Files changed:"
+                    git status --porcelain
+                  else
+                    echo "changes=false" >> $GITHUB_OUTPUT
+                    echo "No changes detected"
+                  fi
+
+            - name: Commit changes
+              if: steps.changes.outputs.changes == 'true'
+              run: |
+                  git config user.name "${{ steps.repo-info.outputs.git-name }}"
+                  git config user.email "${{ steps.repo-info.outputs.git-email }}"
+                  git commit -m "chore: automated daily challenge update [skip ci]" || echo "Nothing to commit"
+
+            - name: Set output
+              id: daily-output
+              run: |
+                  echo "has-changes=${{ steps.changes.outputs.changes }}" >> $GITHUB_OUTPUT
+
+        outputs:
+            has-changes: ${{ steps.daily-output.outputs.has-changes }}
+            git-name: ${{ steps.repo-info.outputs.git-name }}
+            git-email: ${{ steps.repo-info.outputs.git-email }}
+
+    generate-commit:
+        name: Generate commit
+        needs: daily
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+        if: needs.daily.outputs.has-changes == 'true'
+
+        steps:
+            - name: Checkout Repository
+              uses: actions/checkout@v4
+              with:
+                  token: ${{ secrets.GITHUB_TOKEN }}
+                  fetch-depth: 0
+
+            - name: Configure Git
+              run: |
+                  git config user.name "${{ needs.daily.outputs.git-name }}"
+                  git config user.email "${{ needs.daily.outputs.git-email }}"
+                  echo "Configured git with:"
+                  echo "Name: ${{ needs.daily.outputs.git-name }}"
+                  echo "Email: ${{ needs.daily.outputs.git-email }}"
+
+            - name: Pull Latest Changes
+              run: |
+                  git pull origin master --rebase
+              continue-on-error: false
+
+            - name: Push Changes
+              run: |
+                  echo "🚀 Pushing changes to master branch..."
+                  git push origin master
+                  echo "✅ Push completed successfully"
+
+    summary:
+        name: Workflow Summary
+        needs: [daily, generate-commit]
+        runs-on: ubuntu-latest
+        if: always()
+
+        steps:
+            - name: Generate Summary
+              run: |
+                  echo "## 📊 Workflow Summary" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+
+                  # Daily job status
+                  echo "### Daily Job" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Status**: ${{ needs.daily.result }}" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Changes Detected**: ${{ needs.daily.outputs.has-changes || 'false' }}" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Git User**: ${{ needs.daily.outputs.git-name }} <${{ needs.daily.outputs.git-email }}>" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+
+                  # Generate commit job status
+                  echo "### Generate Commit Job" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Status**: ${{ needs.generate-commit.result }}" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Skipped**: ${{ needs.generate-commit.result == 'skipped' }}" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+
+                  # Overall workflow info
+                  echo "### Workflow Info" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Triggered by**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Repository Owner**: ${{ github.repository_owner }}" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "_Workflow completed at $(date)_" >> $GITHUB_STEP_SUMMARY

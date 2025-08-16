@@ -4,7 +4,6 @@ import path from "node:path";
 import puppeteer, { Browser, Page } from "puppeteer";
 import { spawn } from "node:child_process";
 
-// Types and Interfaces
 interface CodeSnippet {
   lang: string;
   langSlug: string;
@@ -33,7 +32,6 @@ interface FileOperationResult {
   skipped: string[];
 }
 
-// Configuration
 const CONFIG = {
   LEETCODE_BASE_URL: "https://leetcode.com",
   GRAPHQL_ENDPOINT: "https://leetcode.com/graphql",
@@ -55,7 +53,7 @@ const CONFIG = {
     ruby: "rb",
     swift: "swift",
     kotlin: "kt",
-  } as const,
+  },
   COMMENT_STYLES: {
     python: ['"""', '"""'],
     typescript: ["/*", "*/"],
@@ -71,10 +69,9 @@ const CONFIG = {
     ruby: ["=begin", "=end"],
     swift: ["/*", "*/"],
     kotlin: ["/*", "*/"],
-  } as const,
+  },
 } as const;
 
-// Utility Functions
 class LeetCodeError extends Error {
   constructor(message: string, public readonly cause?: Error) {
     super(message);
@@ -112,7 +109,6 @@ const htmlToText = (html: string): string =>
     .replace(/&amp;/g, "&")
     .trim();
 
-// Core Classes
 class GraphQLClient {
   private csrfToken: string | null = null;
 
@@ -136,7 +132,7 @@ class GraphQLClient {
       const response = await axios.get(CONFIG.LEETCODE_BASE_URL, {
         headers: {
           "User-Agent": CONFIG.USER_AGENT,
-          Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
+          Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/png,*/*;q=0.8",
           "Accept-Language": "en-US,en;q=0.9",
           Connection: "keep-alive",
           "Upgrade-Insecure-Requests": "1",
@@ -190,8 +186,11 @@ class GraphQLClient {
 
 class PuppeteerScraper {
   private browser: Browser | null = null;
+  private isInitialized = false;
 
   async initialize(): Promise<void> {
+    if (this.isInitialized) return;
+
     logger.info("Launching Puppeteer browser...");
     this.browser = await puppeteer.launch({
       headless: true,
@@ -201,8 +200,13 @@ class PuppeteerScraper {
         "--disable-dev-shm-usage",
         "--disable-web-security",
         "--disable-features=VizDisplayCompositor",
+        "--disable-extensions",
+        "--disable-plugins",
+        "--disable-images",
+        "--disable-javascript", // We don't need JS for basic scraping
       ],
     });
+    this.isInitialized = true;
   }
 
   async getDailyChallenge(): Promise<string> {
@@ -218,8 +222,8 @@ class PuppeteerScraper {
 
       logger.info("Navigating to LeetCode problemset...");
       await page.goto(`${CONFIG.LEETCODE_BASE_URL}/problemset/all/`, {
-        waitUntil: "networkidle2",
-        timeout: CONFIG.TIMEOUT * 2,
+        waitUntil: "domcontentloaded", // Changed from networkidle2 for faster loading
+        timeout: CONFIG.TIMEOUT,
       });
 
       // Wait for the daily challenge element to load
@@ -229,7 +233,6 @@ class PuppeteerScraper {
 
       logger.info("Extracting daily challenge slug...");
       const titleSlug = await page.evaluate(() => {
-        // Look for the daily challenge indicator (green background or specific class)
         const dailyChallengeElement = document
           .querySelector('[href^="/problems/"] span[class*="bg-green"]')
           ?.closest("a") ||
@@ -255,8 +258,21 @@ class PuppeteerScraper {
 
   async cleanup(): Promise<void> {
     if (this.browser) {
-      await this.browser.close();
-      this.browser = null;
+      logger.info("Closing Puppeteer browser...");
+      try {
+        // Close all pages first
+        const pages = await this.browser.pages();
+        await Promise.all(pages.map(page => page.close()));
+
+        // Then close the browser
+        await this.browser.close();
+        logger.success("Puppeteer browser closed");
+      } catch (error) {
+        logger.error("Error closing Puppeteer browser", error as Error);
+      } finally {
+        this.browser = null;
+        this.isInitialized = false;
+      }
     }
   }
 }
@@ -276,36 +292,30 @@ class FileManager {
     try {
       const content = await fs.readFile(filePath, "utf-8");
       const lines = content.split("\n");
-      
+
       let inBlockComment = false;
       for (const line of lines) {
         const trimmed = line.trim();
-        
-        // Skip empty lines
+
         if (!trimmed) continue;
-        
-        // Handle block comments
+
         if (trimmed.includes("/*")) inBlockComment = true;
         if (inBlockComment) {
           if (trimmed.includes("*/")) inBlockComment = false;
           continue;
         }
-        
-        // Skip single-line comments and block comment markers
+
         if (
           trimmed.startsWith("//") ||
           trimmed.startsWith("#") ||
           trimmed.startsWith("=begin") ||
           trimmed.startsWith("=end") ||
           trimmed === '"""'
-        ) {
-          continue;
-        }
-        
-        // If we reach here, we found non-comment content
+        ) continue;
+
         return true;
       }
-      
+
       return false;
     } catch {
       return false;
@@ -319,7 +329,7 @@ class FileManager {
   ): string {
     const { questionId } = details;
     const extension = CONFIG.LANGUAGE_EXTENSIONS[language as keyof typeof CONFIG.LANGUAGE_EXTENSIONS];
-    
+
     return language === "dart"
       ? `${questionId}_${kebabTitle.replace(/-/g, "_")}.${extension}`
       : `${questionId}-${kebabTitle}.${extension}`;
@@ -335,7 +345,7 @@ class FileManager {
 
     logger.info(`Creating solution files for: ${details.title}`);
 
-    for (const [language, extension] of Object.entries(CONFIG.LANGUAGE_EXTENSIONS)) {
+    for (const [language,] of Object.entries(CONFIG.LANGUAGE_EXTENSIONS)) {
       const dirPath = path.join(language, details.difficulty.toLowerCase());
       const fileName = this.getFileName(language, details, kebabTitle);
       const filePath = path.join(dirPath, fileName);
@@ -343,17 +353,15 @@ class FileManager {
       try {
         // Check if file exists and has content
         const fileExists = await fs.access(filePath).then(() => true).catch(() => false);
-        
+
         if (fileExists && await this.hasNonCommentContent(filePath)) {
           logger.info(`Skipping existing file with content: ${filePath}`);
           result.skipped.push(filePath);
           continue;
         }
 
-        // Ensure directory exists
         await fs.mkdir(dirPath, { recursive: true });
 
-        // Find code snippet for this language
         const snippet = details.codeSnippets.find(s => s.langSlug === language);
         const content = this.formatProblemFile(
           language,
@@ -391,6 +399,7 @@ class CommandExecutor {
         stdio: silent ? "pipe" : "inherit",
         cwd,
         shell: true,
+        detached: false, // Ensure child process is tied to parent
       });
 
       let output = "";
@@ -406,7 +415,14 @@ class CommandExecutor {
         });
       }
 
+      // Set a timeout for the command execution
+      const timeout = setTimeout(() => {
+        process.kill('SIGTERM');
+        reject(new Error(`Command "${command} ${args.join(" ")}" timed out`));
+      }, 30000); // 30 second timeout
+
       process.on("close", (code) => {
+        clearTimeout(timeout);
         if (code === 0) {
           resolve();
         } else {
@@ -422,18 +438,28 @@ class CommandExecutor {
       });
 
       process.on("error", (err) => {
+        clearTimeout(timeout);
         reject(new LeetCodeError("Process spawn failed", err));
       });
     });
   }
 }
 
-// Main Application Class
 class LeetCodeDailyChallenge {
   private graphqlClient = new GraphQLClient();
   private puppeteerScraper = new PuppeteerScraper();
   private fileManager = new FileManager();
   private commandExecutor = new CommandExecutor();
+
+  private async cleanup(): Promise<void> {
+    logger.info("Performing cleanup...");
+    await this.puppeteerScraper.cleanup();
+
+    // Force garbage collection if available
+    if (global.gc) {
+      global.gc();
+    }
+  }
 
   private async getDailyChallengeViaAPI(): Promise<DailyChallenge> {
     await this.graphqlClient.initialize();
@@ -459,13 +485,12 @@ class LeetCodeDailyChallenge {
   }
 
   private async getDailyChallengeViaPuppeteer(): Promise<DailyChallenge> {
+    await this.puppeteerScraper.initialize();
+
     try {
-      await this.puppeteerScraper.initialize();
       const titleSlug = await this.puppeteerScraper.getDailyChallenge();
-      
-      // We need to get additional details via API
       const details = await this.getProblemDetails(titleSlug);
-      
+
       return {
         questionId: details.questionId,
         title: details.title,
@@ -553,7 +578,6 @@ class LeetCodeDailyChallenge {
       let dailyChallenge: DailyChallenge;
 
       try {
-        // Try API approach first
         logger.info("Attempting API approach...");
         dailyChallenge = await this.getDailyChallengeViaAPI();
         logger.success("Successfully fetched via API");
@@ -565,18 +589,15 @@ class LeetCodeDailyChallenge {
 
       logger.info(`Daily Challenge: ${dailyChallenge.title} (${dailyChallenge.difficulty})`);
 
-      // Get detailed problem information
       const problemDetails = await this.getProblemDetails(dailyChallenge.titleSlug);
 
-      // Create solution files
       const result = await this.fileManager.createSolutionFiles(problemDetails);
       this.logResults(result);
 
-      // Try to run additional command if available
       try {
         await this.commandExecutor.execute(
-          "node",
-          ["./node_modules/.bin/bun", "run", "problems", dailyChallenge.titleSlug, "all"],
+          "bun",
+          ["run", "problems", dailyChallenge.titleSlug, "all"],
           process.cwd(),
           true
         );
@@ -586,20 +607,42 @@ class LeetCodeDailyChallenge {
       }
 
       logger.success("Daily challenge processing completed!");
+
     } catch (error) {
       logger.error("Failed to process daily challenge", error as Error);
       throw error;
+    } finally {
+      // Ensure cleanup always happens
+      await this.cleanup();
     }
   }
 }
 
-// Export and CLI execution
 export default LeetCodeDailyChallenge;
 
 if (require.main === module) {
   const app = new LeetCodeDailyChallenge();
-  app.run().catch((error) => {
-    console.error("Application failed:", error);
-    process.exit(1);
+
+  // Handle process termination signals
+  process.on('SIGINT', async () => {
+    logger.info('Received SIGINT, cleaning up...');
+    await app['cleanup']();
+    process.exit(0);
   });
+
+  process.on('SIGTERM', async () => {
+    logger.info('Received SIGTERM, cleaning up...');
+    await app['cleanup']();
+    process.exit(0);
+  });
+
+  app.run()
+    .then(() => {
+      logger.info("Application completed successfully");
+      process.exit(0);
+    })
+    .catch((error) => {
+      console.error("Application failed:", error);
+      process.exit(1);
+    });
 }

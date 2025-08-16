@@ -373,3 +373,5 @@ klint
 nul
 
 .fake
+
+package-lock.json
