@@ -29,6 +29,7 @@ jobs:
             - uses: actions/checkout@v4
               with:
                   fetch-depth: 0
+                  token: ${{ secrets.GITHUB_TOKEN }}
 
             - name: Get repository owner info with fallbacks
               id: repo-info
@@ -88,6 +89,14 @@ jobs:
                   echo "API email: $API_EMAIL"
                   echo "========================="
 
+            - name: Configure Git
+              run: |
+                  git config user.name "${{ steps.repo-info.outputs.git-name }}"
+                  git config user.email "${{ steps.repo-info.outputs.git-email }}"
+                  echo "Configured git with:"
+                  echo "Name: ${{ steps.repo-info.outputs.git-name }}"
+                  echo "Email: ${{ steps.repo-info.outputs.git-email }}"
+
             - name: Debug directory structure
               run: |
                   echo "Current directory structure:"
@@ -113,25 +122,28 @@ jobs:
               run: |
                   bun run daily.ts
 
-            - name: Check for changes
+            - name: Check for changes and commit
               id: changes
               run: |
                   if [[ -n $(git status --porcelain) ]]; then
                     echo "changes=true" >> $GITHUB_OUTPUT
-                    git add .
                     echo "Files changed:"
                     git status --porcelain
+                    
+                    # Stage all changes
+                    git add .
+                    
+                    # Commit changes
+                    git commit -m "chore: automated daily challenge update [skip ci]"
+                    
+                    # Push changes
+                    echo "🚀 Pushing changes to master branch..."
+                    git push origin master
+                    echo "✅ Push completed successfully"
                   else
                     echo "changes=false" >> $GITHUB_OUTPUT
                     echo "No changes detected"
                   fi
-
-            - name: Commit changes
-              if: steps.changes.outputs.changes == 'true'
-              run: |
-                  git config user.name "${{ steps.repo-info.outputs.git-name }}"
-                  git config user.email "${{ steps.repo-info.outputs.git-email }}"
-                  git commit -m "chore: automated daily challenge update [skip ci]" || echo "Nothing to commit"
 
             - name: Set output
               id: daily-output
@@ -143,43 +155,9 @@ jobs:
             git-name: ${{ steps.repo-info.outputs.git-name }}
             git-email: ${{ steps.repo-info.outputs.git-email }}
 
-    generate-commit:
-        name: Generate commit
-        needs: daily
-        runs-on: ubuntu-latest
-        permissions:
-            contents: write
-        if: needs.daily.outputs.has-changes == 'true'
-
-        steps:
-            - name: Checkout Repository
-              uses: actions/checkout@v4
-              with:
-                  token: ${{ secrets.GITHUB_TOKEN }}
-                  fetch-depth: 0
-
-            - name: Configure Git
-              run: |
-                  git config user.name "${{ needs.daily.outputs.git-name }}"
-                  git config user.email "${{ needs.daily.outputs.git-email }}"
-                  echo "Configured git with:"
-                  echo "Name: ${{ needs.daily.outputs.git-name }}"
-                  echo "Email: ${{ needs.daily.outputs.git-email }}"
-
-            - name: Pull Latest Changes
-              run: |
-                  git pull origin master --rebase
-              continue-on-error: false
-
-            - name: Push Changes
-              run: |
-                  echo "🚀 Pushing changes to master branch..."
-                  git push origin master
-                  echo "✅ Push completed successfully"
-
     summary:
         name: Workflow Summary
-        needs: [daily, generate-commit]
+        needs: [daily]
         runs-on: ubuntu-latest
         if: always()
 
@@ -194,12 +172,6 @@ jobs:
                   echo "- **Status**: ${{ needs.daily.result }}" >> $GITHUB_STEP_SUMMARY
                   echo "- **Changes Detected**: ${{ needs.daily.outputs.has-changes || 'false' }}" >> $GITHUB_STEP_SUMMARY
                   echo "- **Git User**: ${{ needs.daily.outputs.git-name }} <${{ needs.daily.outputs.git-email }}>" >> $GITHUB_STEP_SUMMARY
-                  echo "" >> $GITHUB_STEP_SUMMARY
-
-                  # Generate commit job status
-                  echo "### Generate Commit Job" >> $GITHUB_STEP_SUMMARY
-                  echo "- **Status**: ${{ needs.generate-commit.result }}" >> $GITHUB_STEP_SUMMARY
-                  echo "- **Skipped**: ${{ needs.generate-commit.result == 'skipped' }}" >> $GITHUB_STEP_SUMMARY
                   echo "" >> $GITHUB_STEP_SUMMARY
 
                   # Overall workflow info
