@@ -48,3 +48,8 @@ Constraints:
 	1 <= cards[i] <= 9
 */
 
+class Solution {
+  bool judgePoint24(List<int> cards) {
+    
+  }
+}
