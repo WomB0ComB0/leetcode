@@ -58,7 +58,7 @@ Constraints:
 */
 
 class Solution {
-    public boolean isValidSudoku(char[][] board) {
-        
-    }
+  bool isValidSudoku(List<List<String>> board) {
+    
+  }
 }
