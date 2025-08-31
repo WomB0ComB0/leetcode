@@ -32,9 +32,8 @@ Constraints:
 	It is guaranteed that the input board has only one solution.
 */
 
-/**
- Do not return anything, modify board in-place instead.
- */
-function solveSudoku(board: string[][]): void {
+class Solution {
+  void solveSudoku(List<List<String>> board) {
     
-};
+  }
+}
