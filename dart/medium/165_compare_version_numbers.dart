@@ -58,3 +58,8 @@ Constraints:
 	All the given revisions in version1 and version2 can be stored in a 32-bit integer.
 */
 
+class Solution {
+  int compareVersion(String version1, String version2) {
+    
+  }
+}
