@@ -38,13 +38,7 @@ Constraints:
 */
 
 class Solution {
-
-    /**
-     * @param Integer $numerator
-     * @param Integer $denominator
-     * @return String
-     */
-    function fractionToDecimal($numerator, $denominator) {
-        
-    }
+  String fractionToDecimal(int numerator, int denominator) {
+    
+  }
 }
