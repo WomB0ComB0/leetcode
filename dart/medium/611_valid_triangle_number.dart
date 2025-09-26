@@ -28,8 +28,8 @@ Constraints:
 	0 <= nums[i] <= 1000
 */
 
-public class Solution {
-    public int TriangleNumber(int[] nums) {
-        
-    }
+class Solution {
+  int triangleNumber(List<int> nums) {
+    
+  }
 }
