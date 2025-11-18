@@ -36,7 +36,7 @@ Constraints:
 */
 
 class Solution {
-    func isOneBitCharacter(_ bits: [Int]) -> Bool {
-        
-    }
+  bool isOneBitCharacter(List<int> bits) {
+    
+  }
 }
