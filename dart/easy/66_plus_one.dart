@@ -43,8 +43,8 @@ Constraints:
 	digits does not contain any leading 0's.
 */
 
-impl Solution {
-    pub fn plus_one(digits: Vec<i32>) -> Vec<i32> {
-        
-    }
+class Solution {
+  List<int> plusOne(List<int> digits) {
+    
+  }
 }
