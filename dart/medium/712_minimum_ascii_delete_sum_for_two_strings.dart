@@ -32,8 +32,8 @@ Constraints:
 	s1 and s2 consist of lowercase English letters.
 */
 
-impl Solution {
-    pub fn minimum_delete_sum(s1: String, s2: String) -> i32 {
-        
-    }
+class Solution {
+  int minimumDeleteSum(String s1, String s2) {
+    
+  }
 }
