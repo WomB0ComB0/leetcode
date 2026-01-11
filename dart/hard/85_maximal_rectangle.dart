@@ -35,12 +35,7 @@ Constraints:
 */
 
 class Solution {
-
-    /**
-     * @param String[][] $matrix
-     * @return Integer
-     */
-    function maximalRectangle($matrix) {
-        
-    }
+  int maximalRectangle(List<List<String>> matrix) {
+    
+  }
 }
