@@ -84,6 +84,7 @@ graph TD
     end
 
     subgraph "Solution Domain (Filesystem)"
+        SD[(Solution Domain Root)]
         Py[Python]
         CPP[C++]
         TS[TypeScript]
@@ -91,6 +92,13 @@ graph TD
         DiffE[Easy]
         DiffM[Medium]
         DiffH[Hard]
+        SD --> Py
+        SD --> CPP
+        SD --> TS
+        SD --> LangX
+        SD --> DiffE
+        SD --> DiffM
+        SD --> DiffH
     end
 
     subgraph "External Integration"
@@ -99,12 +107,12 @@ graph TD
         ImgGen[Image Generation Service]
     end
 
-    Daily --> |GraphQL| LC
-    Daily --> |Writes| DiffE
-    Clean --> |Refactors| Solution Domain
-    Post --> |Reads| Solution Domain
-    Post --> |Uploads| BS
-    Config --> |Scaffolds| Solution Domain
+    Daily -->|GraphQL| LC
+    Daily -->|Writes| DiffE
+    Clean -->|Refactors| SD
+    Post -->|Reads| SD
+    Post -->|Uploads| BS
+    Config -->|Scaffolds| SD
 ```
 
 ### Data Flow: Daily Challenge Lifecycle
