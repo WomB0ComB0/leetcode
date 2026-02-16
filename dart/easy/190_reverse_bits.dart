@@ -68,8 +68,8 @@ Constraints:
 Follow up: If this function is called many times, how would you optimize it?
 */
 
-impl Solution {
-    pub fn reverse_bits(n: i32) -> i32 {
-        
-    }
+class Solution {
+  int reverseBits(int n) {
+    
+  }
 }
