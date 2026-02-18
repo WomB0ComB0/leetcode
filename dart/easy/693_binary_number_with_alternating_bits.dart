@@ -1,4 +1,4 @@
-=begin
+/*
 Given a positive integer, check whether it has alternating bits: namely, if two adjacent bits will always have different values.
 
  
@@ -29,10 +29,10 @@ Constraints:
 
 
 	1 <= n <= 231 - 1
-=end
+*/
 
-# @param {Integer} n
-# @return {Boolean}
-def has_alternating_bits(n)
+class Solution {
+  bool hasAlternatingBits(int n) {
     
-end
+  }
+}
