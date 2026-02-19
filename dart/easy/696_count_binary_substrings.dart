@@ -31,12 +31,7 @@ Constraints:
 */
 
 class Solution {
-
-    /**
-     * @param String $s
-     * @return Integer
-     */
-    function countBinarySubstrings($s) {
-        
-    }
+  int countBinarySubstrings(String s) {
+    
+  }
 }
