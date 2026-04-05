@@ -33,7 +33,7 @@ Constraints:
 */
 
 class Solution {
-    fun judgeCircle(moves: String): Boolean {
-        
-    }
+  bool judgeCircle(String moves) {
+    
+  }
 }
