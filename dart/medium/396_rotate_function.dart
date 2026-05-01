@@ -41,6 +41,8 @@ Constraints:
 	-100 <= nums[i] <= 100
 */
 
-function maxRotateFunction(nums: number[]): number {
+class Solution {
+  int maxRotateFunction(List<int> nums) {
     
-};
+  }
+}
