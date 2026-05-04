@@ -27,8 +27,8 @@ Constraints:
 	-1000 <= matrix[i][j] <= 1000
 */
 
-public class Solution {
-    public void Rotate(int[][] matrix) {
-        
-    }
+class Solution {
+  void rotate(List<List<int>> matrix) {
+    
+  }
 }
