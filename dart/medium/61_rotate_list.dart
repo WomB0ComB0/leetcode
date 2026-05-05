@@ -27,11 +27,14 @@ Constraints:
 
 /**
  * Definition for singly-linked list.
- * struct ListNode {
- *     int val;
- *     struct ListNode *next;
- * };
+ * class ListNode {
+ *   int val;
+ *   ListNode? next;
+ *   ListNode([this.val = 0, this.next]);
+ * }
  */
-struct ListNode* rotateRight(struct ListNode* head, int k) {
+class Solution {
+  ListNode? rotateRight(ListNode? head, int k) {
     
+  }
 }
